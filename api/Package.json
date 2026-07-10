@@ -1,6 +1,0 @@
-{
-  "name": "football-proxy",
-  "version": "1.0.0",
-  "private": true,
-  "description": "Serverless proxy for football-data.org — keeps API key server-side for Nexyro Predict"
-}
