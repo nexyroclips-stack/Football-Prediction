@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Nexyro Predict — Football Prediction Engine</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0B0E0D;
+    --bg-raised:#121614;
+    --paper:#EAF2EC;
+    --muted:#8A9691;
+    --line:#20302A;
+    --green:#3ECF8E;
+    --red:#E8564A;
+    --amber:#D9B65C;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--paper);
+    font-family:'Space Grotesk', sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  .mono{font-family:'IBM Plex Mono', monospace;}
+  .wrap{max-width:720px;margin:0 auto;padding:28px 20px 80px;}
+
+  header{margin-bottom:28px;}
+  .eyebrow{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:11px;letter-spacing:.14em;text-transform:uppercase;
+    color:var(--green);margin-bottom:8px;
+  }
+  h1{font-size:26px;font-weight:700;margin:0 0 6px;letter-spacing:-0.01em;}
+  .sub{color:var(--muted);font-size:13.5px;line-height:1.5;max-width:52ch;}
+
+  .sync-bar{
+    margin-top:16px;display:flex;align-items:center;justify-content:space-between;
+    gap:10px;padding:9px 12px;background:#0F1512;border:1px solid var(--line);border-radius:7px;
+  }
+  .sync-bar .mono{font-size:11.5px;color:var(--muted);}
+  .sync-bar .mono.ok{color:var(--green);}
+  .sync-bar .mono.err{color:var(--red);}
+
+  .stat-row{display:flex;gap:18px;margin-top:18px;flex-wrap:wrap;}
+  .stat{font-family:'IBM Plex Mono', monospace;}
+  .stat .n{font-size:20px;font-weight:600;color:var(--paper);}
+  .stat .l{font-size:10.5px;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;}
+
+  section{margin-top:34px;}
+  .section-head{
+    display:flex;align-items:baseline;justify-content:space-between;
+    border-bottom:1px solid var(--line);padding-bottom:10px;margin-bottom:16px;
+  }
+  .section-title{font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-family:'IBM Plex Mono', monospace;}
+
+  .card{
+    background:#11151A0D;
+    border:1px solid var(--line);
+    border-radius:10px;
+    padding:18px;
+  }
+
+  /* Predict form */
+  .predict-form{display:flex;flex-direction:column;gap:12px;}
+  .team-row{display:flex;gap:10px;align-items:center;}
+  input[type=text]{
+    flex:1;background:#0F1512;border:1px solid var(--line);color:var(--paper);
+    padding:11px 12px;border-radius:7px;font-family:'Space Grotesk',sans-serif;font-size:14.5px;
+    outline:none;transition:border-color .15s;
+  }
+  input[type=text]:focus{border-color:var(--green);}
+  .vs{color:var(--muted);font-size:12px;font-family:'IBM Plex Mono', monospace;padding:0 2px;}
+  button{
+    background:var(--green);color:#06120C;border:none;border-radius:7px;
+    padding:11px 18px;font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:14px;
+    cursor:pointer;transition:opacity .15s;
+  }
+  button:hover{opacity:.88;}
+  button.ghost{
+    background:transparent;border:1px solid var(--line);color:var(--paper);font-weight:500;
+  }
+  button.small{padding:7px 12px;font-size:12.5px;}
+  button:disabled{opacity:.4;cursor:not-allowed;}
+
+  /* Prediction result */
+  .result{margin-top:6px;display:none;}
+  .result.show{display:block;}
+  .prob-bar{
+    display:flex;height:34px;border-radius:8px;overflow:hidden;margin:14px 0 10px;
+    border:1px solid var(--line);
+  }
+  .prob-seg{display:flex;align-items:center;justify-content:center;font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:600;color:#06120C;}
+  .prob-labels{display:flex;justify-content:space-between;font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted);}
+  .verdict{
+    margin-top:14px;padding:12px 14px;background:#0F1512;border-left:2px solid var(--green);
+    font-size:13px;color:var(--paper);border-radius:0 6px 6px 0;
+  }
+  .verdict .vlabel{color:var(--green);font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;display:block;margin-bottom:4px;}
+
+  /* Log result form */
+  .log-form{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
+  input[type=number]{
+    width:52px;background:#0F1512;border:1px solid var(--line);color:var(--paper);
+    padding:9px 6px;border-radius:7px;text-align:center;font-family:'IBM Plex Mono',monospace;font-size:14px;outline:none;
+  }
+  input[type=number]:focus{border-color:var(--green);}
+
+  /* Table / rankings */
+  table{width:100%;border-collapse:collapse;font-size:13.5px;}
+  th{
+    text-align:left;font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--muted);
+    text-transform:uppercase;letter-spacing:.06em;padding:0 8px 10px;font-weight:500;
+  }
+  th.num, td.num{text-align:right;}
+  td{padding:10px 8px;border-top:1px solid var(--line);}
+  tr:first-child td{border-top:none;}
+  .delta{font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:600;}
+  .delta.up{color:var(--green);}
+  .delta.down{color:var(--red);}
+  .rank-name{display:flex;align-items:center;gap:8px;}
+  .rank-num{color:var(--muted);font-family:'IBM Plex Mono',monospace;font-size:11px;width:16px;}
+  .rating{font-family:'IBM Plex Mono',monospace;}
+
+  .empty{color:var(--muted);font-size:13px;padding:20px 0;text-align:center;}
+
+  /* History */
+  .hist-item{
+    display:flex;justify-content:space-between;align-items:center;
+    padding:10px 0;border-top:1px solid var(--line);font-size:13px;
+  }
+  .hist-item:first-child{border-top:none;}
+  .hist-score{font-family:'IBM Plex Mono',monospace;font-weight:600;color:var(--paper);}
+  .hist-meta{color:var(--muted);font-size:11px;font-family:'IBM Plex Mono',monospace;}
+
+  .foot-note{
+    margin-top:36px;font-size:11.5px;color:var(--muted);line-height:1.6;
+    border-top:1px solid var(--line);padding-top:16px;
+  }
+  .foot-note b{color:var(--paper);}
+
+  .toast{
+    position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(0);
+    background:var(--paper);color:#06120C;padding:10px 18px;border-radius:8px;
+    font-size:13px;font-weight:600;opacity:0;pointer-events:none;transition:all .25s;
+  }
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(-6px);}
+
+  ::placeholder{color:#4F5B56;}
+
+  @media (max-width:480px){
+    .wrap{padding:20px 16px 60px;}
+    h1{font-size:22px;}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="eyebrow">Nexyro Predict · v1</div>
+    <h1>Football Prediction Engine</h1>
+    <p class="sub">An Elo-rated model that starts blind and sharpens with every real result you log. No team has an edge until the scoreline says otherwise.</p>
+    <div class="stat-row" id="statRow"></div>
+    <div class="sync-bar" id="syncBar">
+      <span class="mono" id="syncStatus">Connecting to live data…</span>
+      <button class="ghost small" id="resyncBtn" style="display:none;">Force resync</button>
+    </div>
+  </header>
+
+  <section>
+    <div class="section-head">
+      <div class="section-title">Predict a match</div>
+    </div>
+    <div class="card">
+      <div class="predict-form">
+        <div class="team-row">
+          <input type="text" id="teamA" placeholder="Home team" list="teamList">
+          <span class="vs mono">VS</span>
+          <input type="text" id="teamB" placeholder="Away team" list="teamList">
+        </div>
+        <datalist id="teamList"></datalist>
+        <button id="predictBtn">Predict outcome</button>
+      </div>
+
+      <div class="result" id="resultBox">
+        <div class="prob-bar" id="probBar"></div>
+        <div class="prob-labels" id="probLabels"></div>
+        <div class="verdict" id="verdict"></div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="section-head">
+      <div class="section-title">Log a real result</div>
+    </div>
+    <div class="card">
+      <p class="sub" style="margin-bottom:12px;">This is how the model gets smarter — every real scoreline shifts both teams' ratings.</p>
+      <div class="log-form">
+        <input type="text" id="logTeamA" placeholder="Home team" style="flex:1;min-width:110px;" list="teamList">
+        <input type="number" id="logScoreA" min="0" placeholder="0">
+        <span class="vs mono">–</span>
+        <input type="number" id="logScoreB" min="0" placeholder="0">
+        <input type="text" id="logTeamB" placeholder="Away team" style="flex:1;min-width:110px;" list="teamList">
+        <button id="logBtn" class="small">Log result</button>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="section-head">
+      <div class="section-title">Team ratings</div>
+      <button class="ghost small" id="resetBtn">Reset all data</button>
+    </div>
+    <div class="card">
+      <table id="rankTable">
+        <thead>
+          <tr><th style="width:24px;"></th><th>Team</th><th class="num">Rating</th><th class="num">Last Δ</th><th class="num">Record</th></tr>
+        </thead>
+        <tbody id="rankBody"></tbody>
+      </table>
+      <div class="empty" id="rankEmpty" style="display:none;">No teams yet. Log a result above to seed the board.</div>
+    </div>
+  </section>
+
+  <section>
+    <div class="section-head">
+      <div class="section-title">Match history</div>
+    </div>
+    <div class="card">
+      <div id="histBody"></div>
+      <div class="empty" id="histEmpty" style="display:none;">No matches logged yet.</div>
+    </div>
+  </section>
+
+  <div class="foot-note">
+    <b>How it works:</b> every team starts at 1500 Elo. After each logged result, ratings shift based on whether the outcome beat, matched, or missed expectation — bigger surprises move ratings more. Predictions convert the rating gap between two teams into win/draw/loss probabilities. With only a handful of results, this will look close to a coin flip — that's accurate, not broken. It gets sharper as the log grows.
+  </div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const K = 32; // Elo K-factor
+const BASE_RATING = 1500;
+let teams = {}; // { name: { rating, w, d, l, lastDelta } }
+let history = []; // { a, b, sa, sb, date, deltaA, deltaB }
+
+// --- Live data sync (via your Vercel proxy) ---
+const PROXY_BASE = 'https://football-prediction-uz23.vercel.app/api/matches';
+const LEAGUES = [
+  { code: 'PL', name: 'Premier League' },
+  { code: 'PD', name: 'La Liga' },
+  { code: 'BL1', name: 'Bundesliga' },
+  { code: 'SA', name: 'Serie A' },
+  { code: 'FL1', name: 'Ligue 1' }
+];
+const SYNC_CACHE_MINUTES = 30; // don't re-hit the API more than once per this window
+let importedMatchIds = new Set(); // track which live matches are already logged, avoid duplicates
+
+async function loadImportedIds(){
+  try{
+    const raw = localStorage.getItem('importedMatchIds');
+    if(raw === null) throw new Error('not set');
+    importedMatchIds = new Set(JSON.parse(raw));
+  }catch(e){ importedMatchIds = new Set(); }
+}
+
+async function saveImportedIds(){
+  try{
+    await safeStorageSet('importedMatchIds', JSON.stringify([...importedMatchIds]));
+  }catch(e){ console.error('Could not save imported IDs', e); }
+}
+
+function setSyncStatus(text, kind){
+  const el = document.getElementById('syncStatus');
+  el.textContent = text;
+  el.className = 'mono' + (kind ? ' ' + kind : '');
+}
+
+function currentSeasonGuess(){
+  const now = new Date();
+  const y = now.getFullYear();
+  const m = now.getMonth() + 1;
+  return m >= 7 ? y : y - 1;
+}
+
+async function fetchLeague(code, season){
+  const url = `${PROXY_BASE}?competition=${code}&status=FINISHED&season=${season}`;
+  let res;
+  try{
+    res = await fetch(url, { mode: 'cors' });
+  }catch(networkErr){
+    // This catches the raw network-level failure — CORS block, DNS failure,
+    // mixed content block, or the environment refusing the request outright.
+    throw new Error(`Network error reaching proxy: ${networkErr.message || networkErr.name || 'unknown'} (url: ${url})`);
+  }
+  if(!res.ok){
+    const errData = await res.json().catch(() => ({}));
+    throw new Error(errData.error || `Proxy returned ${res.status} for ${code}`);
+  }
+  return res.json();
+}
+
+async function syncLiveData(force){
+  const resyncBtn = document.getElementById('resyncBtn');
+  try{
+    if(!force){
+      let lastSync = null;
+      try{
+        const raw = localStorage.getItem('lastSyncTime');
+        lastSync = raw !== null ? parseInt(raw, 10) : null;
+      }catch(e){ lastSync = null; }
+      if(lastSync){
+        const minsAgo = (Date.now() - lastSync) / 60000;
+        if(minsAgo < SYNC_CACHE_MINUTES){
+          setSyncStatus(`Live data cached ${Math.round(minsAgo)}m ago — within refresh window`, 'ok');
+          resyncBtn.style.display = 'inline-block';
+          return;
+        }
+      }
+    }
+
+    setSyncStatus('Pulling latest results from 5 leagues…');
+    const season = currentSeasonGuess();
+    let totalNew = 0;
+    let anySuccess = false;
+    let lastError = null;
+
+    for(const league of LEAGUES){
+      try{
+        const data = await fetchLeague(league.code, season);
+        const matches = data.matches || [];
+        for(const m of matches){
+          if(m.status !== 'FINISHED') continue;
+          if(importedMatchIds.has(m.id)) continue;
+          const home = m.homeTeam?.name;
+          const away = m.awayTeam?.name;
+          const scoreH = m.score?.fullTime?.home;
+          const scoreA = m.score?.fullTime?.away;
+          if(!home || !away || scoreH === null || scoreA === null || scoreH === undefined || scoreA === undefined) continue;
+
+          logResult(home, away, scoreH, scoreA, m.utcDate, 'live');
+          importedMatchIds.add(m.id);
+          totalNew++;
+        }
+        anySuccess = true;
+      }catch(e){
+        lastError = e.message;
+      }
+    }
+
+    if(totalNew > 0){
+      await saveData();
+      await saveImportedIds();
+      render();
+    }
+
+    try{
+      await safeStorageSet('lastSyncTime', String(Date.now()));
+    }catch(e){
+      console.error('Could not save sync timestamp', e);
+    }
+
+    if(anySuccess){
+      if(totalNew > 0){
+        setSyncStatus(`Synced — imported ${totalNew} new result${totalNew === 1 ? '' : 's'} (season ${season}/${(season+1).toString().slice(-2)})`, 'ok');
+      }else{
+        setSyncStatus(`Synced — no new finished matches (season ${season}/${(season+1).toString().slice(-2)})`, 'ok');
+      }
+    }else{
+      setSyncStatus(`Sync failed: ${lastError || 'unknown error'}`, 'err');
+    }
+    resyncBtn.style.display = 'inline-block';
+
+  }catch(e){
+    setSyncStatus(`Sync failed: ${e.message}`, 'err');
+    resyncBtn.style.display = 'inline-block';
+  }
+}
+
+async function loadData(){
+  try{
+    const rawTeams = localStorage.getItem('teams');
+    if(rawTeams === null) throw new Error('not set');
+    teams = JSON.parse(rawTeams);
+  }catch(e){ teams = {}; }
+  try{
+    const rawHistory = localStorage.getItem('history');
+    if(rawHistory === null) throw new Error('not set');
+    history = JSON.parse(rawHistory);
+  }catch(e){ history = []; }
+  render();
+}
+
+async function safeStorageSet(key, value, retries){
+  retries = retries === undefined ? 1 : retries;
+  try{
+    localStorage.setItem(key, value);
+    return true;
+  }catch(e){
+    if(retries > 0){
+      await new Promise(r => setTimeout(r, 400));
+      return safeStorageSet(key, value, retries - 1);
+    }
+    throw e;
+  }
+}
+
+async function saveData(){
+  try{
+    await safeStorageSet('teams', JSON.stringify(teams));
+    await safeStorageSet('history', JSON.stringify(history));
+  }catch(e){
+    console.error('Storage error', e);
+    showToast('Save failed — data may not persist');
+  }
+}
+
+function getTeam(name){
+  const key = name.trim();
+  if(!key) return null;
+  if(!teams[key]){
+    teams[key] = { rating: BASE_RATING, w:0, d:0, l:0, lastDelta:0 };
+  }
+  return teams[key];
+}
+
+function expectedScore(rA, rB){
+  return 1 / (1 + Math.pow(10, (rB - rA) / 400));
+}
+
+function winProbs(nameA, nameB){
+  const rA = teams[nameA.trim()]?.rating ?? BASE_RATING;
+  const rB = teams[nameB.trim()]?.rating ?? BASE_RATING;
+  const diff = rA - rB;
+  // base win expectancy from Elo
+  const eA = expectedScore(rA, rB);
+  // draw probability model: peaks when teams are close, shrinks as gap grows
+  const closeness = 1 - Math.min(Math.abs(diff) / 800, 1);
+  const drawP = 0.22 + 0.16 * closeness; // 22%–38% draw range
+  const remaining = 1 - drawP;
+  const winA = remaining * eA;
+  const winB = remaining * (1 - eA);
+  return { winA, drawP, winB, rA, rB };
+}
+
+function logResult(nameA, nameB, scoreA, scoreB, realDate, source){
+  nameA = nameA.trim(); nameB = nameB.trim();
+  if(!nameA || !nameB || nameA.toLowerCase() === nameB.toLowerCase()) return false;
+
+  const tA = getTeam(nameA), tB = getTeam(nameB);
+  const eA = expectedScore(tA.rating, tB.rating);
+  const eB = 1 - eA;
+
+  let actualA, actualB;
+  if(scoreA > scoreB){ actualA = 1; actualB = 0; tA.w++; tB.l++; }
+  else if(scoreA < scoreB){ actualA = 0; actualB = 1; tA.l++; tB.w++; }
+  else { actualA = 0.5; actualB = 0.5; tA.d++; tB.d++; }
+
+  // margin-of-victory multiplier (bigger wins move rating more, capped)
+  const margin = Math.abs(scoreA - scoreB);
+  const movMultiplier = 1 + Math.min(margin, 4) * 0.12;
+
+  const deltaA = Math.round(K * movMultiplier * (actualA - eA));
+  const deltaB = Math.round(K * movMultiplier * (actualB - eB));
+
+  tA.rating += deltaA;
+  tB.rating += deltaB;
+  tA.lastDelta = deltaA;
+  tB.lastDelta = deltaB;
+
+  history.unshift({
+    a: nameA, b: nameB, sa: scoreA, sb: scoreB,
+    date: realDate ? new Date(realDate).toISOString() : new Date().toISOString(),
+    deltaA, deltaB,
+    source: source || 'manual'
+  });
+
+  return true;
+}
+
+function showToast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(()=> t.classList.remove('show'), 2200);
+}
+
+function render(){
+  renderStats();
+  renderRankings();
+  renderHistory();
+  renderTeamList();
+}
+
+function renderStats(){
+  const teamCount = Object.keys(teams).length;
+  const matchCount = history.length;
+  const row = document.getElementById('statRow');
+  row.innerHTML = `
+    <div class="stat"><div class="n">${teamCount}</div><div class="l">Teams tracked</div></div>
+    <div class="stat"><div class="n">${matchCount}</div><div class="l">Results logged</div></div>
+  `;
+}
+
+function renderTeamList(){
+  const dl = document.getElementById('teamList');
+  dl.innerHTML = Object.keys(teams).map(n => `<option value="${escapeHtml(n)}">`).join('');
+}
+
+function renderRankings(){
+  const body = document.getElementById('rankBody');
+  const empty = document.getElementById('rankEmpty');
+  const sorted = Object.entries(teams).sort((a,b) => b[1].rating - a[1].rating);
+
+  if(sorted.length === 0){
+    body.innerHTML = '';
+    empty.style.display = 'block';
+    return;
+  }
+  empty.style.display = 'none';
+
+  body.innerHTML = sorted.map(([name, t], i) => {
+    const deltaClass = t.lastDelta > 0 ? 'up' : t.lastDelta < 0 ? 'down' : '';
+    const deltaSign = t.lastDelta > 0 ? '+' : '';
+    return `
+      <tr>
+        <td class="rank-num">${i+1}</td>
+        <td>${escapeHtml(name)}</td>
+        <td class="num rating">${Math.round(t.rating)}</td>
+        <td class="num delta ${deltaClass}">${t.lastDelta !== 0 ? deltaSign + t.lastDelta : '—'}</td>
+        <td class="num mono" style="color:var(--muted);font-size:11.5px;">${t.w}-${t.d}-${t.l}</td>
+      </tr>
+    `;
+  }).join('');
+}
+
+function renderHistory(){
+  const body = document.getElementById('histBody');
+  const empty = document.getElementById('histEmpty');
+  if(history.length === 0){
+    body.innerHTML = '';
+    empty.style.display = 'block';
+    return;
+  }
+  empty.style.display = 'none';
+  body.innerHTML = history.slice(0, 20).map(h => {
+    const d = new Date(h.date);
+    const dateStr = d.toLocaleDateString(undefined, { month:'short', day:'numeric' });
+    const tag = h.source === 'live' ? ' · live' : '';
+    return `
+      <div class="hist-item">
+        <div>${escapeHtml(h.a)} <span class="hist-score">${h.sa}–${h.sb}</span> ${escapeHtml(h.b)}</div>
+  
